@@ -613,6 +613,11 @@ name = "cc"
 version = "1.0.99"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96c51067fd44124faa7f870b4b1c969379ad32b2ba805aa959430ceaa384f695"
+dependencies = [
+ "jobserver",
+ "libc",
+ "once_cell",
+]
 
 [[package]]
 name = "cfg-if"
@@ -956,6 +961,12 @@ checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
  "libloading",
 ]
+
+[[package]]
+name = "dunce"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
 
 [[package]]
 name = "dwrote"
@@ -1640,6 +1651,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "453ad9f582a441959e5f0d088b02ce04cfe8d51a8eaf077f12ac6d3e94164ca6"
 
 [[package]]
+name = "jobserver"
+version = "0.1.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48d1dbcbbeb6a7fec7e059840aa538bd62aaccf972c7346c4d9d2059312853d0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "jpeg-decoder"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1837,6 +1857,7 @@ dependencies = [
  "memmap2",
  "minibytes",
  "parking_lot 0.12.1",
+ "pqcrypto-mldsa",
  "prometheus",
  "rand 0.8.5",
  "reqwest",
@@ -2094,6 +2115,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "paste"
+version = "1.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
 name = "pathfinder_geometry"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2230,6 +2257,38 @@ name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
+
+[[package]]
+name = "pqcrypto-internals"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62cd8ebf02b43967cda06e6a3f54d0bd9659459c3003d16aeedd07b44c6db06c"
+dependencies = [
+ "cc",
+ "dunce",
+ "getrandom",
+ "libc",
+]
+
+[[package]]
+name = "pqcrypto-mldsa"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5439d511d79dcacbc91a11e9e78013aec955e399669bfae3955442d2f724b140"
+dependencies = [
+ "cc",
+ "glob",
+ "libc",
+ "paste",
+ "pqcrypto-internals",
+ "pqcrypto-traits",
+]
+
+[[package]]
+name = "pqcrypto-traits"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94e851c7654eed9e68d7d27164c454961a616cf8c203d500607ef22c737b51bb"
 
 [[package]]
 name = "prettytable-rs"

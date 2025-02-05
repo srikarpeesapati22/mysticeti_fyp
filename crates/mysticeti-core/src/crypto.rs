@@ -4,11 +4,14 @@
 use std::fmt;
 
 use digest::Digest;
-#[cfg(not(test))]
-use ed25519_consensus::Signature;
+use pqcrypto_mldsa::mldsa44;
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use zeroize::Zeroize;
+
+#[cfg(not(test))]
+//use ed25519_consensus::Signature;
+
 
 #[cfg(not(test))]
 use crate::types::Vote;
@@ -25,21 +28,47 @@ use crate::{
     },
 };
 
-pub const SIGNATURE_SIZE: usize = 64;
+//pub const SIGNATURE_SIZE: usize = 64;
+pub const SIGNATURE_SIZE: usize = 2420;
 pub const BLOCK_DIGEST_SIZE: usize = 32;
 
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Default, Hash)]
 pub struct BlockDigest([u8; BLOCK_DIGEST_SIZE]);
 
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
-pub struct PublicKey(ed25519_consensus::VerificationKey);
+//pub struct PublicKey(ed25519_consensus::VerificationKey);
+pub struct PublicKey(mldsa44::PublicKey);
+
 
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub struct SignatureBytes([u8; SIGNATURE_SIZE]);
 
 // Box ensures value is not copied in memory when Signer itself is moved around for better security
 #[derive(Serialize, Deserialize)]
-pub struct Signer(Box<ed25519_consensus::SigningKey>);
+pub struct Signer(Box<mldsa44::SecretKey>);
+
+#[derive(Debug)]
+pub enum Mldsa44Error {
+    InvalidSignature,
+    KeyMismatch,
+    DigestMismatch,
+    InvalidFormat,
+    Other(String), // For custom or unexpected errors
+}
+
+impl std::fmt::Display for Mldsa44Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Mldsa44Error::InvalidSignature => write!(f, "The signature is invalid."),
+            Mldsa44Error::KeyMismatch => write!(f, "The public key does not match."),
+            Mldsa44Error::DigestMismatch => write!(f, "The digest does not match."),
+            Mldsa44Error::InvalidFormat => write!(f, "The input format is invalid."),
+            Mldsa44Error::Other(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
+impl std::error::Error for Mldsa44Error {}
 
 #[cfg(not(test))]
 type BlockHasher = blake2::Blake2b<digest::consts::U32>;
@@ -177,7 +206,7 @@ impl<T: AsBytes> CryptoHash for T {
 
 impl PublicKey {
     #[cfg(not(test))]
-    pub fn verify_block(&self, block: &StatementBlock) -> Result<(), ed25519_consensus::Error> {
+    pub fn verify_block(&self, block: &StatementBlock) -> Result<(), Mldsa44Error> {
         let signature = Signature::from(block.signature().0);
         let mut hasher = BlockHasher::default();
         BlockDigest::digest_without_signature(
@@ -190,11 +219,11 @@ impl PublicKey {
             block.epoch_changed(),
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        self.0.verify(&signature, digest.as_ref())
+        verify(&public_key, &digest, &signature).unwrap()    
     }
 
     #[cfg(test)]
-    pub fn verify_block(&self, _block: &StatementBlock) -> Result<(), ed25519_consensus::Error> {
+    pub fn verify_block(&self, _block: &StatementBlock) -> Result<(), Mldsa44Error> {
         Ok(())
     }
 }
@@ -203,7 +232,7 @@ impl Signer {
     pub fn new_for_test(n: usize) -> Vec<Self> {
         let mut rng = StdRng::seed_from_u64(0);
         (0..n)
-            .map(|_| Self(Box::new(ed25519_consensus::SigningKey::new(&mut rng))))
+            .map(|_| Self(Box::new(mldsa44::keypair()::new(&mut rng))))
             .collect()
     }
 
@@ -228,7 +257,7 @@ impl Signer {
             epoch_marker,
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        let signature = self.0.sign(digest.as_ref());
+        let signature = sign(&private_key, &digest).unwrap();
         SignatureBytes(signature.to_bytes())
     }
 
@@ -246,7 +275,7 @@ impl Signer {
     }
 
     pub fn public_key(&self) -> PublicKey {
-        PublicKey(self.0.verification_key())
+        PublicKey(sign(&private_key, &digest).unwrap())
     }
 }
 
@@ -300,7 +329,7 @@ impl fmt::Display for Signer {
 
 impl Default for SignatureBytes {
     fn default() -> Self {
-        Self([0u8; 64])
+        Self([0u8; 2420])
     }
 }
 
@@ -362,7 +391,7 @@ impl Drop for Signer {
 }
 
 pub fn dummy_signer() -> Signer {
-    Signer(Box::new(ed25519_consensus::SigningKey::from([0u8; 32])))
+    Signer(Box::new(mldsa44::SecretKey))
 }
 
 pub fn dummy_public_key() -> PublicKey {

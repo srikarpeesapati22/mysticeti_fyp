@@ -22,6 +22,7 @@ memmap2 = "0.7.0"
 
 minibytes = { path = "../third-party/minibytes", default_features = false, features = ["frommmap"] }
 parking_lot = "0.12.1"
+pqcrypto-mldsa = "0.1.0"
 prometheus = "0.13.3"
 
 rand = "0.8.5"
