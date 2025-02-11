@@ -35,9 +35,15 @@ pub const BLOCK_DIGEST_SIZE: usize = 32;
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Default, Hash)]
 pub struct BlockDigest([u8; BLOCK_DIGEST_SIZE]);
 
-#[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 //pub struct PublicKey(ed25519_consensus::VerificationKey);
 pub struct PublicKey(mldsa44::PublicKey);
+impl std::cmp::Eq for PublicKey {}
+impl std::fmt::Debug for PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "PublicKey: ")    
+    }
+}
 
 
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
@@ -55,6 +61,8 @@ pub enum Mldsa44Error {
     InvalidFormat,
     Other(String), // For custom or unexpected errors
 }
+
+
 
 impl std::fmt::Display for Mldsa44Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
