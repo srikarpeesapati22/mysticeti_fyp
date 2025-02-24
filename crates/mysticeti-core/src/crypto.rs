@@ -28,6 +28,7 @@ use crate::{
 
 //pub const SIGNATURE_SIZE: usize = 64;
 pub const SIGNATURE_SIZE: usize = 2420;
+pub const KEY_SIZE: usize = 2560;
 pub const BLOCK_DIGEST_SIZE: usize = 32;
 
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Default, Hash)]
@@ -47,7 +48,7 @@ impl std::fmt::Debug for PublicKey {
 pub struct SecretKeyLocal(mldsa44::SecretKey);
 impl Default for SecretKeyLocal {
     fn default() -> Self {
-        SecretKeyLocal(SecretKey::from_bytes(&[0; SIGNATURE_SIZE]).unwrap())
+        SecretKeyLocal(SecretKey::from_bytes(&[0; KEY_SIZE]).unwrap())
     }
 }
 impl zeroize::DefaultIsZeroes for SecretKeyLocal {}
