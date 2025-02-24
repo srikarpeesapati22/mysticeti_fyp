@@ -1858,6 +1858,7 @@ dependencies = [
  "minibytes",
  "parking_lot 0.12.1",
  "pqcrypto-mldsa",
+ "pqcrypto-traits",
  "prometheus",
  "rand 0.8.5",
  "reqwest",

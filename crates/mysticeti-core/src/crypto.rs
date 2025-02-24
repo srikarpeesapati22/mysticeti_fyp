@@ -1,15 +1,21 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fmt;
-
+use std::fmt::{self, Debug};
+use pqcrypto_traits::sign::{VerificationError, SecretKey};
 use digest::Digest;
 use pqcrypto_mldsa::mldsa44;
-use rand::{rngs::StdRng, SeedableRng};
+use pqcrypto_traits;
+//use rand::{rngs::StdRng, SeedableRng};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use zeroize::Zeroize;
+use zeroize::{TryZeroize, Zeroize};
 
 #[cfg(not(test))]
+use pqcrypto_traits::sign::{DetachedSignature, SignedMessage};
+
+#[cfg(not(test))]
+use std::convert::TryFrom;
+
 //use ed25519_consensus::Signature;
 
 
@@ -41,8 +47,8 @@ pub struct PublicKey(mldsa44::PublicKey);
 impl std::cmp::Eq for PublicKey {}
 impl std::fmt::Debug for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "PublicKey: ")    
-    }
+        write!(f, "PublicKey")
+        }
 }
 
 
@@ -59,7 +65,7 @@ pub enum Mldsa44Error {
     KeyMismatch,
     DigestMismatch,
     InvalidFormat,
-    Other(String), // For custom or unexpected errors
+    Other(String)
 }
 
 
@@ -214,8 +220,11 @@ impl<T: AsBytes> CryptoHash for T {
 
 impl PublicKey {
     #[cfg(not(test))]
-    pub fn verify_block(&self, block: &StatementBlock) -> Result<(), Mldsa44Error> {
-        let signature = Signature::from(block.signature().0);
+    pub fn verify_block(&self, block: &StatementBlock) -> Result<(),VerificationError> {
+        //let signature = Signature::from(block.signature().0);
+
+
+        let signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0);
         let mut hasher = BlockHasher::default();
         BlockDigest::digest_without_signature(
             &mut hasher,
@@ -227,20 +236,24 @@ impl PublicKey {
             block.epoch_changed(),
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        verify(&public_key, &digest, &signature).unwrap()    
+        //verify(&public_key, &digest, &signature).unwrap()
+        mldsa44::verify_detached_signature(&signature.unwrap(), &digest, &mldsa44::keypair().0)
+
     }
 
     #[cfg(test)]
-    pub fn verify_block(&self, _block: &StatementBlock) -> Result<(), Mldsa44Error> {
+    pub fn verify_block(&self, _block: &StatementBlock) -> Result<(), VerificationError> {
+
+
         Ok(())
     }
 }
 
 impl Signer {
     pub fn new_for_test(n: usize) -> Vec<Self> {
-        let mut rng = StdRng::seed_from_u64(0);
+        //let mut rng = StdRng::seed_from_u64(0);
         (0..n)
-            .map(|_| Self(Box::new(mldsa44::keypair()::new(&mut rng))))
+            .map(|_| Self(Box::new(mldsa44::keypair().1)))
             .collect()
     }
 
@@ -265,8 +278,9 @@ impl Signer {
             epoch_marker,
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        let signature = sign(&private_key, &digest).unwrap();
-        SignatureBytes(signature.to_bytes())
+        //let signature = sign(&private_key, &digest).unwrap();
+        let signature = mldsa44::sign(&digest, &mldsa44::keypair().1);
+        SignatureBytes(*<&[u8; SIGNATURE_SIZE]>::try_from(signature.as_bytes()).unwrap())
     }
 
     #[cfg(test)]
@@ -283,7 +297,8 @@ impl Signer {
     }
 
     pub fn public_key(&self) -> PublicKey {
-        PublicKey(sign(&private_key, &digest).unwrap())
+        //PublicKey(sign(&self.0, &digest).unwrap())
+        PublicKey(mldsa44::keypair().0)
     }
 }
 
@@ -394,12 +409,13 @@ impl<'de> Deserialize<'de> for BlockDigest {
 
 impl Drop for Signer {
     fn drop(&mut self) {
-        self.0.zeroize()
+        &self.0.zeroize()
+        //self.0.as_bytes().zeroize()
     }
 }
 
 pub fn dummy_signer() -> Signer {
-    Signer(Box::new(mldsa44::SecretKey))
+    Signer(Box::new(mldsa44::keypair().1))
 }
 
 pub fn dummy_public_key() -> PublicKey {
