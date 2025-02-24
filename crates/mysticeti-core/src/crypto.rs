@@ -1,23 +1,15 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fmt::{self, Debug};
+use std::fmt;
 use pqcrypto_traits::sign::{VerificationError, SecretKey};
 use digest::Digest;
 use pqcrypto_mldsa::mldsa44;
-use pqcrypto_traits;
-//use rand::{rngs::StdRng, SeedableRng};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use zeroize::{TryZeroize, Zeroize};
+use zeroize::Zeroize;
 
 #[cfg(not(test))]
 use pqcrypto_traits::sign::{DetachedSignature, SignedMessage};
-
-#[cfg(not(test))]
-use std::convert::TryFrom;
-
-//use ed25519_consensus::Signature;
-
 
 #[cfg(not(test))]
 use crate::types::Vote;
@@ -51,38 +43,21 @@ impl std::fmt::Debug for PublicKey {
         }
 }
 
+#[derive(Copy, Clone, Serialize, Deserialize)]
+pub struct SecretKeyLocal(mldsa44::SecretKey);
+impl Default for SecretKeyLocal {
+    fn default() -> Self {
+        SecretKeyLocal(SecretKey::from_bytes(&[0; SIGNATURE_SIZE]).unwrap())
+    }
+}
+impl zeroize::DefaultIsZeroes for SecretKeyLocal {}
 
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub struct SignatureBytes([u8; SIGNATURE_SIZE]);
 
 // Box ensures value is not copied in memory when Signer itself is moved around for better security
 #[derive(Serialize, Deserialize)]
-pub struct Signer(Box<mldsa44::SecretKey>);
-
-#[derive(Debug)]
-pub enum Mldsa44Error {
-    InvalidSignature,
-    KeyMismatch,
-    DigestMismatch,
-    InvalidFormat,
-    Other(String)
-}
-
-
-
-impl std::fmt::Display for Mldsa44Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Mldsa44Error::InvalidSignature => write!(f, "The signature is invalid."),
-            Mldsa44Error::KeyMismatch => write!(f, "The public key does not match."),
-            Mldsa44Error::DigestMismatch => write!(f, "The digest does not match."),
-            Mldsa44Error::InvalidFormat => write!(f, "The input format is invalid."),
-            Mldsa44Error::Other(msg) => write!(f, "{}", msg),
-        }
-    }
-}
-
-impl std::error::Error for Mldsa44Error {}
+pub struct Signer(Box<SecretKeyLocal>);
 
 #[cfg(not(test))]
 type BlockHasher = blake2::Blake2b<digest::consts::U32>;
@@ -253,7 +228,7 @@ impl Signer {
     pub fn new_for_test(n: usize) -> Vec<Self> {
         //let mut rng = StdRng::seed_from_u64(0);
         (0..n)
-            .map(|_| Self(Box::new(mldsa44::keypair().1)))
+            .map(|_| Self(Box::new(SecretKeyLocal(mldsa44::keypair().1))))
             .collect()
     }
 
@@ -409,13 +384,12 @@ impl<'de> Deserialize<'de> for BlockDigest {
 
 impl Drop for Signer {
     fn drop(&mut self) {
-        &self.0.zeroize()
-        //self.0.as_bytes().zeroize()
+        self.0.zeroize()
     }
 }
 
 pub fn dummy_signer() -> Signer {
-    Signer(Box::new(mldsa44::keypair().1))
+    Signer(Box::new(SecretKeyLocal(mldsa44::keypair().1)))
 }
 
 pub fn dummy_public_key() -> PublicKey {
