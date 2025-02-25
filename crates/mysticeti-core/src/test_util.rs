@@ -214,7 +214,6 @@ pub fn simulated_network_syncers_with_epoch_duration(
             config::node_defaults::default_shutdown_grace_period(),
             test_metrics(),
             &NodePublicConfig::new_for_tests(n),
-            
         );
         drop(node_context);
         network_syncers.push(network_syncer);

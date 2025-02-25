@@ -1,11 +1,11 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fmt;
-use pqcrypto_traits::sign::{VerificationError, SecretKey};
 use digest::Digest;
 use pqcrypto_mldsa::mldsa44;
+use pqcrypto_traits::sign::{SecretKey, VerificationError};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use std::fmt;
 use zeroize::Zeroize;
 
 #[cfg(not(test))]
@@ -16,12 +16,7 @@ use crate::types::Vote;
 use crate::{
     serde::{ByteRepr, BytesVisitor},
     types::{
-        AuthorityIndex,
-        BaseStatement,
-        BlockReference,
-        EpochStatus,
-        RoundNumber,
-        StatementBlock,
+        AuthorityIndex, BaseStatement, BlockReference, EpochStatus, RoundNumber, StatementBlock,
         TimestampNs,
     },
 };
@@ -41,7 +36,7 @@ impl std::cmp::Eq for PublicKey {}
 impl std::fmt::Debug for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "PublicKey")
-        }
+    }
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
@@ -196,9 +191,8 @@ impl<T: AsBytes> CryptoHash for T {
 
 impl PublicKey {
     #[cfg(not(test))]
-    pub fn verify_block(&self, block: &StatementBlock) -> Result<(),VerificationError> {
+    pub fn verify_block(&self, block: &StatementBlock) -> Result<(), VerificationError> {
         //let signature = Signature::from(block.signature().0);
-
 
         let signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0);
         let mut hasher = BlockHasher::default();
@@ -214,13 +208,10 @@ impl PublicKey {
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
         //verify(&public_key, &digest, &signature).unwrap()
         mldsa44::verify_detached_signature(&signature.unwrap(), &digest, &mldsa44::keypair().0)
-
     }
 
     #[cfg(test)]
     pub fn verify_block(&self, _block: &StatementBlock) -> Result<(), VerificationError> {
-
-
         Ok(())
     }
 }
