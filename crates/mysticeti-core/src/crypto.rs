@@ -9,7 +9,7 @@ use std::fmt;
 use zeroize::Zeroize;
 
 #[cfg(not(test))]
-use pqcrypto_traits::sign::{DetachedSignature, SignedMessage};
+use pqcrypto_traits::sign::DetachedSignature;
 
 #[cfg(not(test))]
 use crate::types::Vote;
@@ -22,8 +22,9 @@ use crate::{
 };
 
 //pub const SIGNATURE_SIZE: usize = 64;
-pub const SIGNATURE_SIZE: usize = 2420;
-pub const KEY_SIZE: usize = 2560;
+pub const SIGNATURE_SIZE: usize = mldsa44::signature_bytes();
+//pub const PUBLIC_KEY_SIZE: usize = mldsa44::public_key_bytes();
+pub const SECRET_KEY_SIZE: usize = mldsa44::secret_key_bytes();
 pub const BLOCK_DIGEST_SIZE: usize = 32;
 
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Default, Hash)]
@@ -43,7 +44,7 @@ impl std::fmt::Debug for PublicKey {
 pub struct SecretKeyLocal(mldsa44::SecretKey);
 impl Default for SecretKeyLocal {
     fn default() -> Self {
-        SecretKeyLocal(SecretKey::from_bytes(&[0; KEY_SIZE]).unwrap())
+        SecretKeyLocal(SecretKey::from_bytes(&[0; SECRET_KEY_SIZE]).unwrap())
     }
 }
 impl zeroize::DefaultIsZeroes for SecretKeyLocal {}
@@ -246,7 +247,7 @@ impl Signer {
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
         //let signature = sign(&private_key, &digest).unwrap();
-        let signature = mldsa44::sign(&digest, &mldsa44::keypair().1);
+        let signature = mldsa44::detached_sign(&digest, &mldsa44::keypair().1);
         SignatureBytes(*<&[u8; SIGNATURE_SIZE]>::try_from(signature.as_bytes()).unwrap())
     }
 
