@@ -3,6 +3,7 @@
 
 use digest::Digest;
 use pqcrypto_mldsa::mldsa44;
+use pqcrypto_mldsa::mldsa44::PublicKey as PublicKeyExternal;
 use pqcrypto_traits::sign::{SecretKey, VerificationError};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
@@ -32,7 +33,7 @@ pub struct BlockDigest([u8; BLOCK_DIGEST_SIZE]);
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 //pub struct PublicKey(ed25519_consensus::VerificationKey);
-pub struct PublicKey(mldsa44::PublicKey);
+pub struct PublicKey(PublicKeyExternal);
 impl std::cmp::Eq for PublicKey {}
 impl std::fmt::Debug for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
