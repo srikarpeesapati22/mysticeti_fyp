@@ -45,7 +45,7 @@ impl std::fmt::Debug for PublicKey {
 pub struct SecretKeyLocal(mldsa44::SecretKey);
 impl Default for SecretKeyLocal {
     fn default() -> Self {
-        SecretKeyLocal(SecretKey::from_bytes(&[0; SECRET_KEY_SIZE]).unwrap())
+        SecretKeyLocal(SecretKey::from_bytes(&[0u8; SECRET_KEY_SIZE]).unwrap())
     }
 }
 impl zeroize::DefaultIsZeroes for SecretKeyLocal {}
@@ -194,9 +194,8 @@ impl<T: AsBytes> CryptoHash for T {
 impl PublicKey {
     #[cfg(not(test))]
     pub fn verify_block(&self, block: &StatementBlock) -> Result<(), VerificationError> {
-        //let signature = Signature::from(block.signature().0);
 
-        let signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0);
+        let signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0).unwrap();
         let mut hasher = BlockHasher::default();
         BlockDigest::digest_without_signature(
             &mut hasher,
@@ -208,8 +207,10 @@ impl PublicKey {
             block.epoch_changed(),
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        //verify(&public_key, &digest, &signature).unwrap()
-        mldsa44::verify_detached_signature(&signature.unwrap(), &digest, &mldsa44::keypair().0)
+        //let keypair = mldsa44::keypair();
+        //mldsa44::verify_detached_signature(&mldsa44::detached_sign(digest.as_ref(), &keypair.1), digest.as_ref(), &keypair.0)
+        mldsa44::verify_detached_signature(&signature, digest.as_ref(), &self.0)
+
     }
 
     #[cfg(test)]
@@ -256,8 +257,7 @@ impl Signer {
             epoch_marker,
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        //let signature = sign(&private_key, &digest).unwrap();
-        let signature = mldsa44::detached_sign(&digest, &mldsa44::keypair().1);
+        let signature = mldsa44::detached_sign(&digest, &self.0 .0);
         SignatureBytes(*<&[u8; SIGNATURE_SIZE]>::try_from(signature.as_bytes()).unwrap())
     }
 
@@ -276,11 +276,6 @@ impl Signer {
 
     pub fn public_key(&self) -> PublicKey {
         self.1
-    }
-
-    pub fn key_generation(&self) -> (PublicKey, Box<SecretKeyLocal>) {
-        let keypair = mldsa44::keypair();
-        (PublicKey(keypair.0), Box::new(SecretKeyLocal(keypair.1)))
     }
 }
 
@@ -334,7 +329,7 @@ impl fmt::Display for Signer {
 
 impl Default for SignatureBytes {
     fn default() -> Self {
-        Self([0u8; 2420])
+        Self([0u8; SIGNATURE_SIZE])
     }
 }
 
