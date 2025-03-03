@@ -31,7 +31,7 @@ pub const BLOCK_DIGEST_SIZE: usize = 32;
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Default, Hash)]
 pub struct BlockDigest([u8; BLOCK_DIGEST_SIZE]);
 
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Serialize, Deserialize)]
 //pub struct PublicKey(ed25519_consensus::VerificationKey);
 pub struct PublicKey(PublicKeyExternal);
 impl std::cmp::Eq for PublicKey {}
@@ -55,7 +55,7 @@ pub struct SignatureBytes([u8; SIGNATURE_SIZE]);
 
 // Box ensures value is not copied in memory when Signer itself is moved around for better security
 #[derive(Serialize, Deserialize)]
-pub struct Signer(Box<SecretKeyLocal>);
+pub struct Signer(Box<SecretKeyLocal>, PublicKey);
 
 #[cfg(not(test))]
 type BlockHasher = blake2::Blake2b<digest::consts::U32>;
@@ -219,11 +219,20 @@ impl PublicKey {
 }
 
 impl Signer {
+    pub fn new() -> Signer {
+        let keypair = mldsa44::keypair();
+        let public_key_local = PublicKey(keypair.0);
+        let secret_key_local = Box::new(SecretKeyLocal(keypair.1));
+
+        Signer {
+            0: secret_key_local,
+            1: public_key_local,
+        }
+    }
+
     pub fn new_for_test(n: usize) -> Vec<Self> {
         //let mut rng = StdRng::seed_from_u64(0);
-        (0..n)
-            .map(|_| Self(Box::new(SecretKeyLocal(mldsa44::keypair().1))))
-            .collect()
+        (0..n).map(|_| Signer::new()).collect()
     }
 
     #[cfg(not(test))]
@@ -266,8 +275,12 @@ impl Signer {
     }
 
     pub fn public_key(&self) -> PublicKey {
-        //PublicKey(sign(&self.0, &digest).unwrap())
-        PublicKey(mldsa44::keypair().0)
+        self.1
+    }
+
+    pub fn key_generation(&self) -> (PublicKey, Box<SecretKeyLocal>) {
+        let keypair = mldsa44::keypair();
+        (PublicKey(keypair.0), Box::new(SecretKeyLocal(keypair.1)))
     }
 }
 
@@ -383,7 +396,7 @@ impl Drop for Signer {
 }
 
 pub fn dummy_signer() -> Signer {
-    Signer(Box::new(SecretKeyLocal(mldsa44::keypair().1)))
+    Signer::new()
 }
 
 pub fn dummy_public_key() -> PublicKey {
