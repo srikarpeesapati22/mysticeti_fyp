@@ -185,6 +185,7 @@ impl PublicKey {
             block.epoch_changed(),
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
+        println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}", ed25519_consensus::VerificationKey::to_bytes(&self.0), ed25519_consensus::Signature::to_bytes(&signature));
         self.0.verify(&signature, digest.as_ref())
     }
 
@@ -198,8 +199,14 @@ impl Signer {
     pub fn new_for_test(n: usize) -> Vec<Self> {
         let mut rng = StdRng::seed_from_u64(0);
         (0..n)
-            .map(|_| Self(Box::new(ed25519_consensus::SigningKey::new(&mut rng))))
-            .collect()
+        .map(|_| {
+            let signing_key = ed25519_consensus::SigningKey::new(&mut rng);
+            let verification_key = signing_key.verification_key();
+            println!("Public Key on Generation: {:?}\nSecret Key on Generation: {:?}\n", ed25519_consensus::VerificationKey::to_bytes(&verification_key), ed25519_consensus::SigningKey::to_bytes(&signing_key));
+            Self(Box::new(signing_key))
+        })
+        .collect()
+
     }
 
     #[cfg(not(test))]
@@ -224,6 +231,7 @@ impl Signer {
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
         let signature = self.0.sign(digest.as_ref());
+        println!("Public Key on Signing: {:?}\nSignature at Signing: {:?}\n", ed25519_consensus::VerificationKey::to_bytes(&self.0.verification_key()), ed25519_consensus::Signature::to_bytes(&signature));
         SignatureBytes(signature.to_bytes())
     }
 
