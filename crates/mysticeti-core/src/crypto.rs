@@ -217,9 +217,16 @@ impl PublicKey {
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
         let pub_key_bytes: &[u8] = mldsa44::PublicKey::as_bytes(&self.0);
         let pub_key: PublicKeyExternal = mldsa44::PublicKey::from_bytes(&pub_key_bytes).map_err(|_| VerificationError::UnknownVerificationError)?;
-        mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &pub_key).map_err(|_| VerificationError::InvalidSignature)
-        //mldsa44::verify_detached_signature(&signature.unwrap(), digest.as_ref(), &self.0)
+        //mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &pub_key).map_err(|_| VerificationError::InvalidSignature)
+        println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}", PublicKeyExternal::as_bytes(&self.0), DetachedSignature::as_bytes(&detached_signature));
+        mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &pub_key)
 
+    }
+
+    pub fn as_bytes_2(&self) -> &[u8] {
+        use pqcrypto_traits::sign::PublicKey as PublicKeyExternal2;
+
+        PublicKeyExternal::as_bytes(&self.0)
     }
 
     #[cfg(test)]
@@ -232,6 +239,7 @@ impl Signer {
     pub fn new() -> Signer {
         let keypair = mldsa44::keypair();
         let public_key_local = PublicKey(keypair.0);
+        println!("Public Key on Generation: {:?}\n", PublicKey::as_bytes_2(&public_key_local));
         let secret_key_local = Box::new(SecretKeyLocal(keypair.1));
 
         Signer {
@@ -271,6 +279,7 @@ impl Signer {
         let s_bytes: [u8; SIGNATURE_SIZE] = signature_bytes.try_into().expect("Signature must be 2420 bytes");
         //assert!(false, "Public Key: {:?}, Private Key: {:?}, Signature: {:?}", PublicKeyExternal::as_bytes(&self.1.0), mldsa44::SecretKey::as_bytes(&self.0.0), mldsa44::DetachedSignature::as_bytes(&signature));
         assert!(mldsa44::verify_detached_signature(&mldsa44::DetachedSignature::from_bytes(&SignatureBytes(s_bytes).0).unwrap(), digest.as_ref(), &self.public_key().0).is_ok(), "Verification Failed.");
+        println!("Public Key on Signing: {:?}\nDetached Signature at Signing: {:?}\nSignature Bytes at Signing: {:?}", PublicKey::as_bytes_2(&self.1), &DetachedSignature::as_bytes(&signature), &SignatureBytes(s_bytes).0);
         SignatureBytes(s_bytes)
         //SignatureBytes(*<&[u8; SIGNATURE_SIZE]>::try_from(signature.as_bytes()).unwrap())
     }
