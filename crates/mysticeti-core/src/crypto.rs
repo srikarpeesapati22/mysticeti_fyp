@@ -58,7 +58,7 @@ impl zeroize::DefaultIsZeroes for SecretKeyLocal {}
 #[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub struct SignatureBytes([u8; SIGNATURE_SIZE]);
 
-// Box ensures value is not copied in memory when Signer itself is moved around for better security
+// Box ensures value is not copied in memory when itself is moved around for better security
 #[derive(Serialize, Deserialize)]
 pub struct Signer(Box<SecretKeyLocal>, PublicKey);
 
@@ -218,7 +218,7 @@ impl PublicKey {
         let pub_key_bytes: &[u8] = mldsa44::PublicKey::as_bytes(&self.0);
         let pub_key: PublicKeyExternal = mldsa44::PublicKey::from_bytes(&pub_key_bytes).map_err(|_| VerificationError::UnknownVerificationError)?;
         //mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &pub_key).map_err(|_| VerificationError::InvalidSignature)
-        println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}", PublicKeyExternal::as_bytes(&self.0), DetachedSignature::as_bytes(&detached_signature));
+        println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}\nDigest on Verification: {:?}", PublicKeyExternal::as_bytes(&self.0), DetachedSignature::as_bytes(&detached_signature), digest.as_ref());
         mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &pub_key)
 
     }
@@ -279,7 +279,7 @@ impl Signer {
         let s_bytes: [u8; SIGNATURE_SIZE] = signature_bytes.try_into().expect("Signature must be 2420 bytes");
         //assert!(false, "Public Key: {:?}, Private Key: {:?}, Signature: {:?}", PublicKeyExternal::as_bytes(&self.1.0), mldsa44::SecretKey::as_bytes(&self.0.0), mldsa44::DetachedSignature::as_bytes(&signature));
         assert!(mldsa44::verify_detached_signature(&mldsa44::DetachedSignature::from_bytes(&SignatureBytes(s_bytes).0).unwrap(), digest.as_ref(), &self.public_key().0).is_ok(), "Verification Failed.");
-        println!("Public Key on Signing: {:?}\nDetached Signature at Signing: {:?}\nSignature Bytes at Signing: {:?}", PublicKey::as_bytes_2(&self.1), &DetachedSignature::as_bytes(&signature), &SignatureBytes(s_bytes).0);
+        println!("Public Key on Signing: {:?}\nDetached Signature at Signing: {:?}\nDigest at Signing: {:?}", PublicKey::as_bytes_2(&self.1), &DetachedSignature::as_bytes(&signature), digest.as_ref());
         SignatureBytes(s_bytes)
         //SignatureBytes(*<&[u8; SIGNATURE_SIZE]>::try_from(signature.as_bytes()).unwrap())
     }
