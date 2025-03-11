@@ -296,7 +296,7 @@ impl StatementBlock {
             bail!("Genesis block should not go through verification");
         }
         if let Err(e) = pub_key.verify_block(self) {
-            bail!("Block signature verification has failed: {:?}", e);
+            bail!("Block signature verification has failed: Digest: {:?}\nSignature: {:?}\n", digest.as_ref(), &self.signature);
         }
         for include in &self.includes {
             // Also check duplicate includes?

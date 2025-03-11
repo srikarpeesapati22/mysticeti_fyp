@@ -55,7 +55,7 @@ impl Default for SecretKeyLocal {
 }
 impl zeroize::DefaultIsZeroes for SecretKeyLocal {}
 
-#[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash, Debug)]
 pub struct SignatureBytes([u8; SIGNATURE_SIZE]);
 
 // Box ensures value is not copied in memory when itself is moved around for better security
