@@ -289,6 +289,7 @@ impl StatementBlock {
             self.digest()
         );
         let pub_key = committee.get_public_key(self.author());
+        println!("Digest: {:?}\nSignature: {:?}\nPublic Key: {:?}", digest.as_ref(), &self.signature, &pub_key.expect("IDK").as_bytes_2());
         let Some(pub_key) = pub_key else {
             bail!("Unknown block author {}", self.author())
         };
