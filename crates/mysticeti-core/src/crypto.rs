@@ -27,7 +27,6 @@ use crate::{
     },
 };
 
-//pub const SIGNATURE_SIZE: usize = 64;
 pub const SIGNATURE_SIZE: usize = mldsa44::signature_bytes();
 //pub const PUBLIC_KEY_SIZE: usize = mldsa44::public_key_bytes();
 pub const SECRET_KEY_SIZE: usize = mldsa44::secret_key_bytes();
@@ -235,7 +234,7 @@ impl Signer {
     pub fn new() -> Signer {
         let keypair = mldsa44::keypair();
         let public_key_local = PublicKey(keypair.0);
-        println!("Public Key on Generation: {:?}\n", PublicKey::as_bytes_2(&public_key_local));
+        //println!("Public Key on Generation: {:?}\n", PublicKey::as_bytes_2(&public_key_local));
         let secret_key_local = Box::new(SecretKeyLocal(keypair.1));
 
         Signer {
@@ -245,8 +244,11 @@ impl Signer {
     }
 
     pub fn new_for_test(n: usize) -> Vec<Self> {
-        //let mut rng = StdRng::seed_from_u64(0);
-        (0..n).map(|_| Signer::new()).collect()
+        (0..n)
+            .map(|_| {
+                Signer::new()
+            })
+            .collect()
     }
 
     #[cfg(not(test))]
@@ -275,7 +277,7 @@ impl Signer {
         let s_bytes: [u8; SIGNATURE_SIZE] = signature_bytes.try_into().expect("Signature must be 2420 bytes");
         //assert!(false, "Public Key: {:?}, Private Key: {:?}, Signature: {:?}", PublicKeyExternal::as_bytes(&self.1.0), mldsa44::SecretKey::as_bytes(&self.0.0), mldsa44::DetachedSignature::as_bytes(&signature));
         assert!(mldsa44::verify_detached_signature(&mldsa44::DetachedSignature::from_bytes(&SignatureBytes(s_bytes).0).unwrap(), digest.as_ref(), &self.public_key().0).is_ok(), "Verification Failed.");
-        println!("Public Key on Signing: {:?}\nDetached Signature at Signing: {:?}\nDigest at Signing: {:?}", PublicKey::as_bytes_2(&self.1), &DetachedSignature::as_bytes(&signature), digest.as_ref());
+        //println!("Public Key on Signing: {:?}\nDetached Signature at Signing: {:?}\nDigest at Signing: {:?}", PublicKey::as_bytes_2(&self.1), &DetachedSignature::as_bytes(&signature), digest.as_ref());
         SignatureBytes(s_bytes)
         //SignatureBytes(*<&[u8; SIGNATURE_SIZE]>::try_from(signature.as_bytes()).unwrap())
     }
