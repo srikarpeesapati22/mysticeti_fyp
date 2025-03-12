@@ -11,11 +11,11 @@ use zeroize::Zeroize;
 #[cfg(not(test))]
 use pqcrypto_traits::sign::DetachedSignature;
 
-#[cfg(not(test))]
-use pqcrypto_traits::sign::SecretKey as SecretKeyExternal;
+//#[cfg(not(test))]
+//use pqcrypto_traits::sign::SecretKey as SecretKeyExternal;
 
-#[cfg(not(test))]
-use pqcrypto_traits::sign::PublicKey as PublicKeyExternal2;
+//#[cfg(not(test))]
+//use pqcrypto_traits::sign::PublicKey as PublicKeyExternal2;
 
 #[cfg(not(test))]
 use crate::types::Vote;
@@ -200,9 +200,7 @@ impl PublicKey {
     #[cfg(not(test))]
     pub fn verify_block(&self, block: &StatementBlock) -> Result<(), VerificationError> {
         use pqcrypto_traits::sign::PublicKey;
-
-        let signature: &[u8] = &block.signature().0;
-        let detached_signature = mldsa44::DetachedSignature::from_bytes(signature).map_err(|_| VerificationError::UnknownVerificationError)?;
+        let detached_signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0).map_err(|_| VerificationError::UnknownVerificationError)?;
         //let signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0);
         let mut hasher = BlockHasher::default();
         BlockDigest::digest_without_signature(
@@ -215,11 +213,9 @@ impl PublicKey {
             block.epoch_changed(),
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        let pub_key_bytes: &[u8] = mldsa44::PublicKey::as_bytes(&self.0);
-        let pub_key: PublicKeyExternal = mldsa44::PublicKey::from_bytes(&pub_key_bytes).map_err(|_| VerificationError::UnknownVerificationError)?;
         //mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &pub_key).map_err(|_| VerificationError::InvalidSignature)
         println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}\nDigest on Verification: {:?}", PublicKeyExternal::as_bytes(&self.0), DetachedSignature::as_bytes(&detached_signature), digest.as_ref());
-        mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &pub_key)
+        mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &self.0)
 
     }
 
@@ -274,7 +270,7 @@ impl Signer {
             epoch_marker,
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        let signature = mldsa44::detached_sign(&digest, &self.0.0);
+        let signature = mldsa44::detached_sign(digest.as_ref(), &self.0.0);
         let signature_bytes = mldsa44::DetachedSignature::as_bytes(&signature);
         let s_bytes: [u8; SIGNATURE_SIZE] = signature_bytes.try_into().expect("Signature must be 2420 bytes");
         //assert!(false, "Public Key: {:?}, Private Key: {:?}, Signature: {:?}", PublicKeyExternal::as_bytes(&self.1.0), mldsa44::SecretKey::as_bytes(&self.0.0), mldsa44::DetachedSignature::as_bytes(&signature));
