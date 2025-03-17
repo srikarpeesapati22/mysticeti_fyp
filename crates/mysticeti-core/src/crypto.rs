@@ -4,12 +4,13 @@
 use digest::Digest;
 use pqcrypto_mldsa::mldsa44;
 use pqcrypto_mldsa::mldsa44::PublicKey as PublicKeyExternal;
+#[cfg(not(test))]
+use pqcrypto_traits::sign::DetachedSignature;
 use pqcrypto_traits::sign::{SecretKey, VerificationError};
+use rand::{rngs::StdRng, RngCore, SeedableRng};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use zeroize::Zeroize;
-#[cfg(not(test))]
-use pqcrypto_traits::sign::DetachedSignature;
 
 //#[cfg(not(test))]
 //use pqcrypto_traits::sign::SecretKey as SecretKeyExternal;
@@ -198,8 +199,8 @@ impl<T: AsBytes> CryptoHash for T {
 impl PublicKey {
     #[cfg(not(test))]
     pub fn verify_block(&self, block: &StatementBlock) -> Result<(), VerificationError> {
-        use pqcrypto_traits::sign::PublicKey;
-        let detached_signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0).map_err(|_| VerificationError::UnknownVerificationError)?;
+        let detached_signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0)
+            .map_err(|_| VerificationError::UnknownVerificationError)?;
         //let signature = mldsa44::DetachedSignature::from_bytes(&block.signature().0);
         let mut hasher = BlockHasher::default();
         BlockDigest::digest_without_signature(
@@ -213,9 +214,8 @@ impl PublicKey {
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
         //mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &pub_key).map_err(|_| VerificationError::InvalidSignature)
-        println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}\nDigest on Verification: {:?}", PublicKeyExternal::as_bytes(&self.0), DetachedSignature::as_bytes(&detached_signature), digest.as_ref());
+        //println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}\nDigest on Verification: {:?}", PublicKeyExternal::as_bytes(&self.0), DetachedSignature::as_bytes(&detached_signature), digest.as_ref());
         mldsa44::verify_detached_signature(&detached_signature, digest.as_ref(), &self.0)
-
     }
 
     pub fn as_bytes_2(&self) -> &[u8] {
@@ -231,11 +231,13 @@ impl PublicKey {
 }
 
 impl Signer {
-    pub fn new() -> Signer {
-        let keypair = mldsa44::keypair();
-        let public_key_local = PublicKey(keypair.0);
-        //println!("Public Key on Generation: {:?}\n", PublicKey::as_bytes_2(&public_key_local));
-        let secret_key_local = Box::new(SecretKeyLocal(keypair.1));
+    pub fn new(public_key: PublicKey, private_key: Box<SecretKeyLocal>) -> Signer {
+        let public_key_local = public_key;
+        // println!(
+        //     "Public Key on Generation: {:?}\n",
+        //     PublicKey::as_bytes_2(&public_key_local)
+        // );
+        let secret_key_local = private_key;
 
         Signer {
             0: secret_key_local,
@@ -244,9 +246,15 @@ impl Signer {
     }
 
     pub fn new_for_test(n: usize) -> Vec<Self> {
+        let mut i = 0;
         (0..n)
             .map(|_| {
-                Signer::new()
+                let mut rng = StdRng::seed_from_u64(i);
+                i += 1;
+                let mut seed = [0u8; 32];
+                rng.fill_bytes(&mut seed);
+                let keypair = mldsa44::keypair_with_seed(&mut seed);
+                Signer::new(PublicKey(keypair.0), Box::new(SecretKeyLocal(keypair.1)))
             })
             .collect()
     }
@@ -272,11 +280,21 @@ impl Signer {
             epoch_marker,
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        let signature = mldsa44::detached_sign(digest.as_ref(), &self.0.0);
+        let signature = mldsa44::detached_sign(digest.as_ref(), &self.0 .0);
         let signature_bytes = mldsa44::DetachedSignature::as_bytes(&signature);
-        let s_bytes: [u8; SIGNATURE_SIZE] = signature_bytes.try_into().expect("Signature must be 2420 bytes");
+        let s_bytes: [u8; SIGNATURE_SIZE] = signature_bytes
+            .try_into()
+            .expect("Signature must be 2420 bytes");
         //assert!(false, "Public Key: {:?}, Private Key: {:?}, Signature: {:?}", PublicKeyExternal::as_bytes(&self.1.0), mldsa44::SecretKey::as_bytes(&self.0.0), mldsa44::DetachedSignature::as_bytes(&signature));
-        assert!(mldsa44::verify_detached_signature(&mldsa44::DetachedSignature::from_bytes(&SignatureBytes(s_bytes).0).unwrap(), digest.as_ref(), &self.public_key().0).is_ok(), "Verification Failed.");
+        assert!(
+            mldsa44::verify_detached_signature(
+                &mldsa44::DetachedSignature::from_bytes(&SignatureBytes(s_bytes).0).unwrap(),
+                digest.as_ref(),
+                &self.public_key().0
+            )
+            .is_ok(),
+            "Verification Failed."
+        );
         //println!("Public Key on Signing: {:?}\nDetached Signature at Signing: {:?}\nDigest at Signing: {:?}", PublicKey::as_bytes_2(&self.1), &DetachedSignature::as_bytes(&signature), digest.as_ref());
         SignatureBytes(s_bytes)
         //SignatureBytes(*<&[u8; SIGNATURE_SIZE]>::try_from(signature.as_bytes()).unwrap())
@@ -412,7 +430,8 @@ impl Drop for Signer {
 }
 
 pub fn dummy_signer() -> Signer {
-    Signer::new()
+    let keypair = mldsa44::keypair();
+    Signer::new(PublicKey(keypair.0), Box::new(SecretKeyLocal(keypair.1)))
 }
 
 pub fn dummy_public_key() -> PublicKey {

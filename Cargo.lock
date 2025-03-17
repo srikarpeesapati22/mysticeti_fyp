@@ -2273,9 +2273,7 @@ dependencies = [
 
 [[package]]
 name = "pqcrypto-mldsa"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5439d511d79dcacbc91a11e9e78013aec955e399669bfae3955442d2f724b140"
+version = "0.1.1"
 dependencies = [
  "cc",
  "glob",
@@ -2283,6 +2281,7 @@ dependencies = [
  "paste",
  "pqcrypto-internals",
  "pqcrypto-traits",
+ "rand 0.8.5",
  "serde",
  "serde-big-array",
 ]
