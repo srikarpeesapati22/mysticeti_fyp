@@ -186,7 +186,7 @@ impl PublicKey {
             block.epoch_changed(),
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
-        println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}\nDigest on Verification: {:?}", ed25519_consensus::VerificationKey::to_bytes(&self.0), ed25519_consensus::Signature::to_bytes(&signature), digest.as_ref());
+        //println!("Public Key on Verification: {:?}\nSignature on Verification: {:?}\nDigest on Verification: {:?}", ed25519_consensus::VerificationKey::to_bytes(&self.0), ed25519_consensus::Signature::to_bytes(&signature), digest.as_ref());
         self.0.verify(&signature, digest.as_ref())
     }
 
@@ -207,7 +207,7 @@ impl Signer {
         .map(|_| {
             let signing_key = ed25519_consensus::SigningKey::new(&mut rng);
             let verification_key = signing_key.verification_key();
-            println!("Public Key on Generation: {:?}\nSecret Key on Generation: {:?}\n", ed25519_consensus::VerificationKey::to_bytes(&verification_key), ed25519_consensus::SigningKey::to_bytes(&signing_key));
+            //println!("Public Key on Generation: {:?}\nSecret Key on Generation: {:?}\n", ed25519_consensus::VerificationKey::to_bytes(&verification_key), ed25519_consensus::SigningKey::to_bytes(&signing_key));
             Self(Box::new(signing_key))
         })
         .collect()
@@ -236,7 +236,7 @@ impl Signer {
         );
         let digest: [u8; BLOCK_DIGEST_SIZE] = hasher.finalize().into();
         let signature = self.0.sign(digest.as_ref());
-        println!("Public Key on Signing: {:?}\nSignature at Signing: {:?}\nDigest at Signing: {:?}", ed25519_consensus::VerificationKey::to_bytes(&self.0.verification_key()), ed25519_consensus::Signature::to_bytes(&signature), digest.as_ref());
+        //println!("Public Key on Signing: {:?}\nSignature at Signing: {:?}\nDigest at Signing: {:?}", ed25519_consensus::VerificationKey::to_bytes(&self.0.verification_key()), ed25519_consensus::Signature::to_bytes(&signature), digest.as_ref());
         SignatureBytes(signature.to_bytes())
     }
 
