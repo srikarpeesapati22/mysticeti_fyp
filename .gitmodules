@@ -1,3 +1,0 @@
-[submodule "crates/pqcrypto_mldsa_local"]
-	path = crates/pqcrypto_mldsa_local
-	url = https://github.com/srikarpeesapati22/pqcrypto-mldsa-local.git
